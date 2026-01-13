@@ -8,7 +8,8 @@ const config = require('./config.js');
 
 const app = express();
 app.use(express.json());
-app.use(setAuthUser);
+app.use(setAuthUser);   //// THIS is HUGE;  uses the JWT service to encrypt the authorization token and adds a user field to the request that has the valid user taken from the database
+                        //// This is why all requests are sent with the "authorization: token" as the data, that's how it verifies you're a valid user
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
