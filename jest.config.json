@@ -1,0 +1,4 @@
+{
+    "collectCoverage": true,
+    "coverageReporters": ["josn-summary", "text"]
+}
