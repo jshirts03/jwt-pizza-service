@@ -1,4 +1,4 @@
 {
     "collectCoverage": true,
-    "coverageReporters": ["josn-summary", "text"]
+    "coverageReporters": ["json-summary", "text"]
 }
