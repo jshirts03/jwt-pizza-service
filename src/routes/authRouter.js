@@ -48,6 +48,7 @@ async function setAuthUser(req, res, next) {
 }
 
 // Authenticate token
+//PROBLEM. this doesn't really authenticate the token, it just checks if req.user exists, which is set in setAuthUser
 authRouter.authenticateToken = (req, res, next) => {
   if (!req.user) {
     return res.status(401).send({ message: 'unauthorized' });
