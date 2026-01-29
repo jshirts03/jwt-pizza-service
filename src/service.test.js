@@ -1,8 +1,11 @@
 const request = require('supertest');
 const app = require('./service');
+const { DB, Role } = require('./database/database.js')
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let testUserAuthToken;
+let testAdminAuthToken;
+let admin;
 
 if (process.env.VSCODE_INSPECTOR_OPTIONS) {
   jest.setTimeout(60 * 1000 * 5); // 5 minutes
@@ -14,6 +17,23 @@ beforeAll(async () => {
   testUserAuthToken = registerRes.body.token;
 });
 
+function randomName() {
+  return "Pizza" + Math.random().toString(36).substring(2, 12);
+}
+
+async function createAdminUser() {
+  let user = { password: 'hi', roles: [{ role: Role.Admin }] };
+  user.name = randomName();
+  user.email = user.name + '@admin.com';
+
+  await DB.addUser(user);
+  user.password = 'hi';
+  const loginToken = (await request(app).put('/api/auth').send(user)).body.token;
+  testAdminAuthToken = loginToken;
+  admin = user;
+}
+
+
 test('login', async () => {
   const loginRes = await request(app).put('/api/auth').send(testUser);
   expect(loginRes.status).toBe(200);
@@ -24,17 +44,6 @@ test('login', async () => {
   const { password, ...user } = { ...testUser, roles: [{ role: 'diner' }] };
   expect(loginRes.body.user).toMatchObject(user);
 });
-
-test('logout', async () => {
-  const logoutRes = await request(app).delete('/api/auth').set('Authorization', `Bearer ${testUserAuthToken}`).send();
-  expect(logoutRes.status).toBe(200);
-  expect(logoutRes.body.message).toBe('logout successful');
-
-  // After logout the same token should no longer grant access to protected endpoints
-  const meRes = await request(app).get('/api/user/me').set('Authorization', `Bearer ${testUserAuthToken}`).send();
-  expect(meRes.status).toBe(401);
-  expect(meRes.body.message).toBe('unauthorized');
-})
 
 //Discovered that it does not support the updating of just your name
 //must be a new email, password, etc.
@@ -50,4 +59,28 @@ test('update user', async () => {
   expect(updateRes.body.user.name).toBe(newUser.name)
 
 });
+
+test('add franchise', async () => {
+  await createAdminUser();
+  const franchiseName = randomName();
+  const franchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testAdminAuthToken}`).send({name: franchiseName, admins: [{email: admin.email}]})
+  expect(franchiseRes.body.name).toBe(franchiseName);
+  expect(franchiseRes.body.admins[0].email).toBe(admin.email)
+})
+
+test('logout', async () => {
+  const logoutRes = await request(app).delete('/api/auth').set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(logoutRes.status).toBe(200);
+  expect(logoutRes.body.message).toBe('logout successful');
+
+  // After logout the same token should no longer grant access to protected endpoints
+  const meRes = await request(app).get('/api/user/me').set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(meRes.status).toBe(401);
+  expect(meRes.body.message).toBe('unauthorized');
+})
+
+
+
+
+
 
