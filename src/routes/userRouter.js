@@ -51,7 +51,7 @@ userRouter.put(
   })
 );
 
-// deleteUser
+// deleteUser // LIterally does nothing
 userRouter.delete(
   '/:userId',
   authRouter.authenticateToken,
@@ -60,7 +60,7 @@ userRouter.delete(
   })
 );
 
-// listUsers
+// listUsers //Literally does nothing
 userRouter.get(
   '/',
   authRouter.authenticateToken,
