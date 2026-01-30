@@ -4,7 +4,6 @@ const { DB, Role } = require('./database/database.js')
 
 let testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let userId;
-let myFranchiseId;
 let testUserAuthToken;
 let testAdminAuthToken;
 let admin;
@@ -73,10 +72,10 @@ test('test franchise', async () => {
   expect(franchiseRes.body.admins[0].email).toBe(testUser.email)
 
   //check to see that getting the franchise list contains the newly added franchise
-  const myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  let myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
   expect(myFranchise.body[0].name.length).toBe(franchiseName.length);
   expect(myFranchise.body[0].admins[0].name).toBe(testUser.name);
-  myFranchiseId = myFranchise.body[0].id;
+  const myFranchiseId = myFranchise.body[0].id;
 
   //now create a new store in that verified franchise
   const storeName = randomName();
@@ -84,6 +83,19 @@ test('test franchise', async () => {
   const storeRes = await request(app).post(`/api/franchise/${myFranchiseId}/store`).set('Authorization', `Bearer ${testUserAuthToken}`).send(testStore)
   expect(storeRes.body.name).toBe(storeName);
   const storeId = storeRes.body.id;
+
+  //delete store
+  const deleteStoreRes = await request(app).delete(`/api/franchise/${myFranchiseId}/store/${storeId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(deleteStoreRes.body.message).toBeDefined();
+  myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(myFranchise.body[0].stores.length).toBe(0);
+
+  //delete franchise
+  const deleteFranchiseRes = await request(app).delete(`/api/franchise/${myFranchiseId}`).set('Authorization', `Bearer ${testAdminAuthToken}`).send();
+  expect(deleteFranchiseRes.body.message).toBeDefined();
+  myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(myFranchise.body.length).toBe(0);
+
 
 })
 
