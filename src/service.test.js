@@ -2,7 +2,9 @@ const request = require('supertest');
 const app = require('./service');
 const { DB, Role } = require('./database/database.js')
 
-const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
+let testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
+let userId;
+let franchiseId;
 let testUserAuthToken;
 let testAdminAuthToken;
 let admin;
@@ -49,10 +51,10 @@ test('login', async () => {
 //must be a new email, password, etc.
 test('update user', async () => {
   const meRes = await request(app).get('/api/user/me').set('Authorization', `Bearer ${testUserAuthToken}`).send();
-  const userId = meRes.body.id;
+  userId = meRes.body.id;
 
   const newUser = { name: 'pizza lover', email: Math.random().toString(36).substring(2, 12) + '@test.com', password: 'b' };
-
+  testUser = newUser;
   
   const updateRes = await request(app).put(`/api/user/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send(newUser);
   expect(updateRes).toBeDefined();
@@ -60,12 +62,22 @@ test('update user', async () => {
 
 });
 
-test('add franchise', async () => {
+test('test franchise', async () => {
+  //create admin user to register franchise under
   await createAdminUser();
+  //register franchise under new admin
   const franchiseName = randomName();
-  const franchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testAdminAuthToken}`).send({name: franchiseName, admins: [{email: admin.email}]})
-  expect(franchiseRes.body.name).toBe(franchiseName);
-  expect(franchiseRes.body.admins[0].email).toBe(admin.email)
+  const franchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testAdminAuthToken}`).send({name: franchiseName, admins: [{email: testUser.email}]})
+  expect(franchiseRes.body.name.length).toEqual(franchiseName.length);
+  expect(franchiseRes.body.admins[0].email).toBe(testUser.email)
+
+  //check to see that getting the franchise list contains the newly added franchise
+  const myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(myFranchise.body[0].name).toBe(franchiseName);
+  expect(myFranchise.body[0].admins[0].name).toBe(testUser.name);
+  franchiseId = myFranchise.body[0].id;
+
+  //now create a new store
 })
 
 test('logout', async () => {
