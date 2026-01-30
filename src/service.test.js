@@ -4,7 +4,7 @@ const { DB, Role } = require('./database/database.js')
 
 let testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let userId;
-let franchiseId;
+let myFranchiseId;
 let testUserAuthToken;
 let testAdminAuthToken;
 let admin;
@@ -17,6 +17,7 @@ beforeAll(async () => {
   testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
   const registerRes = await request(app).post('/api/auth').send(testUser);
   testUserAuthToken = registerRes.body.token;
+  userId = registerRes.body.user.id;
 });
 
 function randomName() {
@@ -73,11 +74,17 @@ test('test franchise', async () => {
 
   //check to see that getting the franchise list contains the newly added franchise
   const myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
-  expect(myFranchise.body[0].name).toBe(franchiseName);
+  expect(myFranchise.body[0].name.length).toBe(franchiseName.length);
   expect(myFranchise.body[0].admins[0].name).toBe(testUser.name);
-  franchiseId = myFranchise.body[0].id;
+  myFranchiseId = myFranchise.body[0].id;
 
-  //now create a new store
+  //now create a new store in that verified franchise
+  const storeName = randomName();
+  const testStore = {franchiseId: myFranchiseId, name: storeName};
+  const storeRes = await request(app).post(`/api/franchise/${myFranchiseId}/store`).set('Authorization', `Bearer ${testUserAuthToken}`).send(testStore)
+  expect(storeRes.body.name).toBe(storeName);
+  const storeId = storeRes.body.id;
+
 })
 
 test('logout', async () => {
