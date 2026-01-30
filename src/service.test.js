@@ -84,18 +84,33 @@ test('test franchise', async () => {
   expect(storeRes.body.name).toBe(storeName);
   const storeId = storeRes.body.id;
 
-  //delete store
+  //delete store, verify that store can no longer be fetched with userId
   const deleteStoreRes = await request(app).delete(`/api/franchise/${myFranchiseId}/store/${storeId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
   expect(deleteStoreRes.body.message).toBeDefined();
   myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
   expect(myFranchise.body[0].stores.length).toBe(0);
 
-  //delete franchise
+  //delete franchise, verify franchise is no longer linked to the userId
   const deleteFranchiseRes = await request(app).delete(`/api/franchise/${myFranchiseId}`).set('Authorization', `Bearer ${testAdminAuthToken}`).send();
   expect(deleteFranchiseRes.body.message).toBeDefined();
   myFranchise = await request(app).get(`/api/franchise/${userId}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
   expect(myFranchise.body.length).toBe(0);
 
+})
+
+test('menu and orders', async () => {
+  //receiving the menu
+  const menuRes = await request(app).get('/api/order/menu').send();
+  expect(menuRes.body).toBeDefined();
+
+  //adding to the menu
+  await createAdminUser();
+  const menu = menuRes.body;
+  const itemName = randomName();
+  const newItem = {title: itemName, description: 'yummy', image: 'fakeimage.png', price: '0.0002'}
+  const newMenu = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${testAdminAuthToken}`).send(newItem);
+  expect(newMenu.body).not.toMatchObject(menu);
+  expect(newMenu.body[newMenu.body.length - 1].title).toBe(itemName);
 
 })
 
