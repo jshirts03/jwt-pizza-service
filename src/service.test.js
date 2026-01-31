@@ -1,12 +1,12 @@
 const request = require('supertest');
 const app = require('./service');
 const { DB, Role } = require('./database/database.js')
+const bcrypt = require('bcrypt');
 
 let testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let userId;
 let testUserAuthToken;
 let testAdminAuthToken;
-let admin;
 
 if (process.env.VSCODE_INSPECTOR_OPTIONS) {
   jest.setTimeout(60 * 1000 * 5); // 5 minutes
@@ -34,7 +34,6 @@ async function createAdminUser() {
   user.password = 'hi';
   const loginToken = (await request(app).put('/api/auth').send(user)).body.token;
   testAdminAuthToken = loginToken;
-  admin = user;
 }
 
 
@@ -46,6 +45,7 @@ test('login', async () => {
   // The ... crams all the properties of testUser into a new object, with an assumed role
   // Then we remove the password property for comparison, meaning we create a new object without the password titled "user"
   const { password, ...user } = { ...testUser, roles: [{ role: 'diner' }] };
+  expect(loginRes.body).not.toBe(password);
   expect(loginRes.body.user).toMatchObject(user);
 });
 
@@ -204,6 +204,88 @@ test('menu add unauthorized', async () => {
   const menuRes = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${testUserAuthToken}`).send(newItem);
   expect(menuRes.body.message).toBe('unauthorized');
 })
+
+async function resetDatabase() {
+  const connection = await DB.getConnection();
+  try {
+    // Delete all orders and order items
+    await connection.execute('DELETE FROM orderItem');
+    await connection.execute('DELETE FROM dinerOrder');
+
+    // Delete all stores
+    await connection.execute('DELETE FROM store');
+
+    // Delete all franchises except SLC
+    const [franchisesToDelete] = await connection.execute('SELECT id FROM franchise WHERE name != ?', ['SLC']);
+    for (const f of franchisesToDelete) {
+      // Delete userRoles for this franchise
+      await connection.execute('DELETE FROM userRole WHERE objectId = ?', [f.id]);
+      // Delete franchise
+      await connection.execute('DELETE FROM franchise WHERE id = ?', [f.id]);
+    }
+
+    // Ensure user user@user.com exists
+    const [userRows] = await connection.execute('SELECT id FROM user WHERE email = ?', ['user@user.com']);
+    let userId;
+    if (!userRows.length) {
+      const hashedPassword = await bcrypt.hash('user', 10);
+      const [res] = await connection.execute('INSERT INTO user (name, email, password) VALUES (?, ?, ?)', ['User', 'user@user.com', hashedPassword]);
+      userId = res.insertId;
+      await connection.execute('INSERT INTO userRole (userId, role, objectId) VALUES (?, ?, ?)', [userId, 'diner', 0]);
+    } else {
+      userId = userRows[0].id;
+    }
+
+    // Ensure franchise SLC exists
+    const [franchiseRows] = await connection.execute('SELECT id FROM franchise WHERE name = ?', ['SLC']);
+    let franchiseId;
+    if (!franchiseRows.length) {
+      const [res] = await connection.execute('INSERT INTO franchise (name) VALUES (?)', ['SLC']);
+      franchiseId = res.insertId;
+    } else {
+      franchiseId = franchiseRows[0].id;
+    }
+
+    // Ensure store SLC exists for the franchise
+    const [storeRows] = await connection.execute('SELECT id FROM store WHERE franchiseId = ? AND name = ?', [franchiseId, 'SLC']);
+    if (!storeRows.length) {
+      await connection.execute('INSERT INTO store (franchiseId, name) VALUES (?, ?)', [franchiseId, 'SLC']);
+    }
+
+    // Ensure user is Franchisee of SLC
+    const [roleRows] = await connection.execute('SELECT * FROM userRole WHERE userId = ? AND role = ? AND objectId = ?', [userId, 'Franchisee', franchiseId]);
+    if (!roleRows.length) {
+      await connection.execute('INSERT INTO userRole (userId, role, objectId) VALUES (?, ?, ?)', [userId, 'Franchisee', franchiseId]);
+    }
+
+    // Ensure admin a@admin.com exists
+    const [adminRows] = await connection.execute('SELECT id FROM user WHERE email = ?', ['a@admin.com']);
+    if (!adminRows.length) {
+      const hashedPassword = await bcrypt.hash('admin', 10);
+      const [res] = await connection.execute('INSERT INTO user (name, email, password) VALUES (?, ?, ?)', ['Admin', 'a@admin.com', hashedPassword]);
+      const adminId = res.insertId;
+      await connection.execute('INSERT INTO userRole (userId, role, objectId) VALUES (?, ?, ?)', [adminId, 'Admin', 0]);
+    }
+
+    // Delete extra userRoles
+    await connection.execute('DELETE FROM userRole WHERE userId NOT IN (SELECT id FROM user WHERE email IN (?, ?))', ['a@admin.com', 'user@user.com']);
+
+    // Delete extra users
+    await connection.execute('DELETE FROM user WHERE email NOT IN (?, ?)', ['a@admin.com', 'user@user.com']);
+
+    // Keep only first 5 menu items
+    await connection.execute('DELETE FROM menu WHERE id > 5');
+
+    // Clear auth tokens
+    await connection.execute('DELETE FROM auth');
+  } finally {
+    connection.end();
+  }
+}
+
+afterAll(async () => {
+  await resetDatabase();
+});
 
 
 
