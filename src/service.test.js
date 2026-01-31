@@ -188,6 +188,24 @@ test('logout', async () => {
 })
 
 
+test('order unauthorized', async () => {
+  const orderReq = {
+    franchiseId: 1,
+    storeId: 1,
+    items: [{ menuId: 1, description: 'test', price: 0.01 }]
+  };
+  const orderRes = await request(app).post('/api/order').send(orderReq);
+  expect(orderRes.status).toBe(401);
+  expect(orderRes.body.message).toBe('unauthorized');
+})
+
+test('menu add unauthorized', async () => {
+  const newItem = { title: 'Unauthorized Pizza', description: 'should fail', image: 'fake.png', price: 0.001 };
+  const menuRes = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${testUserAuthToken}`).send(newItem);
+  expect(menuRes.body.message).toBe('unauthorized');
+})
+
+
 
 
 
