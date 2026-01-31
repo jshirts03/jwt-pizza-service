@@ -17,6 +17,8 @@ beforeAll(async () => {
   const registerRes = await request(app).post('/api/auth').send(testUser);
   testUserAuthToken = registerRes.body.token;
   userId = registerRes.body.user.id;
+   //create admin user to register franchise under
+  await createAdminUser();
 });
 
 function randomName() {
@@ -63,8 +65,7 @@ test('update user', async () => {
 });
 
 test('test franchise', async () => {
-  //create admin user to register franchise under
-  await createAdminUser();
+ 
   //register franchise under new admin
   const franchiseName = randomName();
   const franchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testAdminAuthToken}`).send({name: franchiseName, admins: [{email: testUser.email}]})
@@ -98,19 +99,42 @@ test('test franchise', async () => {
 
 })
 
-test('menu and orders', async () => {
+test('menu', async () => {
   //receiving the menu
   const menuRes = await request(app).get('/api/order/menu').send();
   expect(menuRes.body).toBeDefined();
 
   //adding to the menu
-  await createAdminUser();
   const menu = menuRes.body;
   const itemName = randomName();
   const newItem = {title: itemName, description: 'yummy', image: 'fakeimage.png', price: '0.0002'}
   const newMenu = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${testAdminAuthToken}`).send(newItem);
   expect(newMenu.body).not.toMatchObject(menu);
   expect(newMenu.body[newMenu.body.length - 1].title).toBe(itemName);
+})
+
+test('order', async () => {
+  //ok so this is not the most efficient, but create a franchise, a store, and a menu item
+  const franchiseName = randomName();
+  const franchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testAdminAuthToken}`).send({name: franchiseName, admins: [{email: testUser.email}]})
+  expect(franchiseRes.body[0].id).toBeDefined();
+  const franchiseId = franchiseName.body[0].id;
+
+  const storeName = randomName();
+  const testStore = {franchiseId: franchiseId, name: storeName};
+  const storeRes = await request(app).post(`/api/franchise/${franchiseId}/store`).set('Authorization', `Bearer ${testUserAuthToken}`).send(testStore);
+  expect(storeRes.body.id).toBeDefined();
+  const storeId = storeRes.body.id;
+
+  const itemName = randomName();
+  const newItem = {title: itemName, description: 'yummy', image: 'fakeimage.png', price: '0.0002'}
+  const newMenu = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${testAdminAuthToken}`).send(newItem);
+  expect(newMenu.body.length).toBeGreaterThan(0);
+
+
+  //now actually make an order lol
+  global.fetch = jest.fn()
+  
 
 })
 
