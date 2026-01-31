@@ -117,8 +117,8 @@ test('order', async () => {
   //ok so this is not the most efficient, but create a franchise, a store, and a menu item
   const franchiseName = randomName();
   const franchiseRes = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testAdminAuthToken}`).send({name: franchiseName, admins: [{email: testUser.email}]})
-  expect(franchiseRes.body[0].id).toBeDefined();
-  const franchiseId = franchiseName.body[0].id;
+  expect(franchiseRes.body.id).toBeDefined();
+  const franchiseId = franchiseRes.body.id;
 
   const storeName = randomName();
   const testStore = {franchiseId: franchiseId, name: storeName};
@@ -131,11 +131,49 @@ test('order', async () => {
   const newMenu = await request(app).put('/api/order/menu').set('Authorization', `Bearer ${testAdminAuthToken}`).send(newItem);
   expect(newMenu.body.length).toBeGreaterThan(0);
 
+  // Get the menu to find the item id
+  const menuRes = await request(app).get('/api/order/menu').send();
+  const menuItem = menuRes.body.find(item => item.title === itemName);
+  expect(menuItem).toBeDefined();
 
-  //now actually make an order lol
-  global.fetch = jest.fn()
-  
+  //now actually make an order lol, simulate a call to the jwt token service
+  global.fetch = jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ reportUrl: 'http://fake.url', jwt: 'fake.jwt.token' })
+    })
+  );
 
+  const orderReq = {
+    franchiseId: franchiseId,
+    storeId: storeId,
+    items: [{ menuId: menuItem.id, description: menuItem.description, price: menuItem.price }]
+  };
+
+  const orderRes = await request(app).post('/api/order').set('Authorization', `Bearer ${testUserAuthToken}`).send(orderReq);
+  expect(orderRes.status).toBe(200);
+  expect(orderRes.body.order).toBeDefined();
+  expect(orderRes.body.order.franchiseId).toBe(franchiseId);
+  expect(orderRes.body.order.storeId).toBe(storeId);
+  expect(orderRes.body.order.items).toHaveLength(1);
+  expect(orderRes.body.jwt).toBe('fake.jwt.token');
+  expect(orderRes.body.followLinkToEndChaos).toBe('http://fake.url');
+
+  // Verify the order was added to the database
+  const ordersRes = await request(app).get('/api/order').set('Authorization', `Bearer ${testUserAuthToken}`).send();
+  expect(ordersRes.body.orders).toContainEqual(
+    expect.objectContaining({
+      franchiseId: franchiseId,
+      storeId: storeId,
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          menuId: menuItem.id,
+          description: menuItem.description,
+          price: menuItem.price
+        })
+      ])
+    })
+  );
 })
 
 test('logout', async () => {
