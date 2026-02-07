@@ -74,6 +74,7 @@ franchiseRouter.get(
     if (req.user.id === userId || req.user.isRole(Role.Admin)) {
       result = await DB.getUserFranchises(userId);
     }
+    
 
     res.json(result);
   })
