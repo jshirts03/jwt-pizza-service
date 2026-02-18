@@ -76,7 +76,21 @@ test('list users diner', async () => {
   expect(listUsersRes.status).toBe(403);
 });
 
+test('list users admin', async () => {
+  const listUsersRes = await request(app)
+    .get('/api/user')
+    .set('Authorization', 'Bearer ' + testAdminAuthToken);
+  expect(listUsersRes.status).toBe(200);
+  expect(listUsersRes.body.users.length).toBe(10);
+})
 
+test('list only 1 user', async () => {
+  const listUsersRes = await request(app)
+    .get('/api/user?page=0&limit=1&name=*')
+    .set('Authorization', 'Bearer ' + testAdminAuthToken);
+  expect(listUsersRes.status).toBe(200);
+  expect(listUsersRes.body.users.length).toBe(1);
+})
 
 async function registerUser(service) {
   const testUser = {
