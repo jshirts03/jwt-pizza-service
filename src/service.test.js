@@ -92,6 +92,15 @@ test('list only 1 user', async () => {
   expect(listUsersRes.body.users.length).toBe(1);
 })
 
+test('list filtered', async () => {
+  const listUsersRes = await request(app)
+    .get(`/api/user?page=0&limit=10&name=*${testUser.name}*`)
+    .set('Authorization', 'Bearer ' + testAdminAuthToken);
+  expect(listUsersRes.status).toBe(200);
+  expect(listUsersRes.body.users[0].name).toContain(testUser.name);
+  expect(listUsersRes.body.users[9].name).toContain(testUser.name);
+})
+
 async function registerUser(service) {
   const testUser = {
     name: 'pizza diner',
