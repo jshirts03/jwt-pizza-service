@@ -154,6 +154,19 @@ class DB {
     }
   }
 
+  async deleteUser(userId) {
+    const connection = await this.getConnection();
+    try {
+      await this.query(connection, `DELETE FROM user WHERE id=?`, [userId])
+      await this.query(connection, `DELETE FROM userrole WHERE userId=?`, [userId])
+    } catch {
+        await connection.rollback();
+        throw new StatusCodeError('unable to delete franchise', 500);
+    } finally {
+      connection.end();
+    }
+  }
+
   async getOrders(user, page = 1) {
     const connection = await this.getConnection();
     try {
