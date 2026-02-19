@@ -113,6 +113,32 @@ async function registerUser(service) {
   return [registerRes.body.user, registerRes.body.token];
 }
 
+test('delete user', async () => {
+  const deleteableUser = { name: 'Im expendable', email: 'reg@test.com', password: 'a' };
+  deleteableUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
+  const registerRes = await request(app).post('/api/auth').send(deleteableUser);
+  const deleteableUserAuthToken = registerRes.body.token;
+  const deleteId = registerRes.body.user.id;
+
+  let meRes = await request(app).get('/api/user/me').set('Authorization', `Bearer ${deleteableUserAuthToken}`).send();
+  expect(meRes.status).toBe(200);
+  expect(meRes.body.id).toBe(deleteId);
+
+  const deleteRes = await request(app).delete(`/api/user/${deleteId}`).set('Authorization', `Bearer ${testAdminAuthToken}`)
+  expect(deleteRes.status).toBe(200);
+
+  meRes = await request(app).get('/api/user/me').set('Authorization', `Bearer ${deleteableUserAuthToken}`).send();
+  expect(meRes.status).toBe(401);
+
+  const loginRes = await request(app).put('/api/auth').send(deleteableUser);
+  expect(loginRes.status).toBe(404);
+})
+
+test('delete user unauthorized', async () => {
+  const deleteRes = await request(app).delete(`/api/user/45`).set('Authorization', `Bearer ${testUserAuthToken}`)
+  expect(deleteRes.status).toBe(403);
+})
+
 
 test('test franchise', async () => {
  
