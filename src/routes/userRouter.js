@@ -94,7 +94,7 @@ userRouter.delete(
       return res.status(403).json({message: 'unauthorized'});
     }
     await DB.deleteUser(userId)
-    res.json({ message: 'not implemented' });
+    res.json({ message: 'user deleted' });
   })
 );
 
