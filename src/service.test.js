@@ -74,6 +74,7 @@ test('list users diner', async () => {
     .get('/api/user')
     .set('Authorization', 'Bearer ' + userToken);
   expect(listUsersRes.status).toBe(403);
+  expect(user).toBeDefined();
 });
 
 test('list users admin', async () => {
