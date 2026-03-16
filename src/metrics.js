@@ -1,12 +1,25 @@
-const config = require('./config');
+const configFile = require('./config');
+const config = configFile.metrics
 
 // Metrics stored in memory
 const requests = {};
+let successfulAuthCount = 0;
+let failedAuthCount = 0;
+
+function markSuccessfulAuth(){
+    successfulAuthCount++;
+}
+
+function markFailedAuth(){
+    failedAuthCount++;
+}
+
+
 
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
-  const endpoint = `[${req.method}] ${req.path}`;
+  const endpoint = `${req.method}`;
   requests[endpoint] = (requests[endpoint] || 0) + 1;
   next();
 }
@@ -17,6 +30,8 @@ setInterval(() => {
   Object.keys(requests).forEach((endpoint) => {
     metrics.push(createMetric('requests', requests[endpoint], '1', 'sum', 'asInt', { endpoint }));
   });
+   metrics.push(createMetric('authSuccess', successfulAuthCount, '1', 'sum', 'asInt', {}));
+   metrics.push(createMetric('authFail', failedAuthCount, '1', 'sum', 'asInt', {}));
 
   sendMetricToGrafana(metrics);
 }, 10000);
@@ -81,4 +96,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker }
+module.exports = {requestTracker, markSuccessfulAuth, markFailedAuth}

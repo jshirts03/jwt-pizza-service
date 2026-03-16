@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
+const { markSuccessfulAuth, markFailedAuth } = require('../metrics.js');
 
 const authRouter = express.Router();
 
@@ -39,11 +40,14 @@ async function setAuthUser(req, res, next) {
         // Check the database to make sure the token is valid.
         req.user = jwt.verify(token, config.jwtSecret);
         req.user.isRole = (role) => !!req.user.roles.find((r) => r.role === role);
+        markSuccessfulAuth();
       }
     } catch {
       req.user = null;
+      markFailedAuth();
     }
   }
+  markFailedAuth();
   next();
 }
 
