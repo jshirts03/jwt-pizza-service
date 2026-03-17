@@ -10,7 +10,8 @@ let currentCpuUsage = 0;
 let pizzasSoldCount = 0;
 let failedPurchaseCount = 0;
 let bitcoinProfitCount = 0;
-let activeUsers = {}
+let activeUsers = {};
+let latencies = [];
 
 function markSuccessfulAuth(){
     successfulAuthCount++;
@@ -99,22 +100,38 @@ function requestTracker(req, res, next) {
   next();
 }
 
+//Middleware to measure request latancy
+function latencyTracker(req, res, next){
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const end = process.hrtime.bigint();
+    const durationInMs = Number(end - start) / 1000000;
+    latencies.push(durationInMs);
+  });
+    next();
+};
+
 // This will periodically send metrics to Grafana
 setInterval(() => {
   const metrics = [];
   Object.keys(requests).forEach((endpoint) => {
     metrics.push(createMetric('requests', requests[endpoint], '1', 'sum', 'asInt', { endpoint }));
   });
-   metrics.push(createMetric('authSuccess', successfulAuthCount, '1', 'sum', 'asInt', {}));
-   metrics.push(createMetric('authFail', failedAuthCount, '1', 'sum', 'asInt', {}));
-   metrics.push(createMetric('pizzaSold', pizzasSoldCount, '1', 'sum', 'asInt', {}));
-   metrics.push(createMetric('failedPurchases', failedPurchaseCount, '1', 'sum', 'asInt', {}));
-   metrics.push(createMetric('bitcoinRevenue', bitcoinProfitCount, 'BTC', 'sum', 'asDouble', {}));
-   metrics.push(createMetric('activeUsers', Object.keys(activeUsers).length, '1', 'sum', 'asInt', {}));
-   metrics.push(createMetric('cpuUsage', parseInt(currentCpuUsage), '%', 'gauge', 'asInt', {}));
-   metrics.push(createMetric('memoryUsage', parseInt(getMemoryUsagePercentage()), '%', 'gauge', 'asInt', {}));
-
+  
+  metrics.push(createMetric('authSuccess', successfulAuthCount, '1', 'sum', 'asInt', {}));
+  metrics.push(createMetric('authFail', failedAuthCount, '1', 'sum', 'asInt', {}));
+  metrics.push(createMetric('pizzaSold', pizzasSoldCount, '1', 'sum', 'asInt', {}));
+  metrics.push(createMetric('failedPurchases', failedPurchaseCount, '1', 'sum', 'asInt', {}));
+  metrics.push(createMetric('bitcoinRevenue', bitcoinProfitCount, 'BTC', 'sum', 'asDouble', {}));
+  metrics.push(createMetric('activeUsers', Object.keys(activeUsers).length, '1', 'sum', 'asInt', {}));
+  metrics.push(createMetric('cpuUsage', parseInt(currentCpuUsage), '%', 'gauge', 'asInt', {}));
+  metrics.push(createMetric('memoryUsage', parseInt(getMemoryUsagePercentage()), '%', 'gauge', 'asInt', {}));
+  if (latencies.length > 0){
+    let avgLatency = latencies.reduce((acc, curr) => acc + curr, 0) / latencies.length
+    metrics.push(createMetric('averageLatency', avgLatency, '1', 'sum', 'asDouble', {}));
+  }
   sendMetricToGrafana(metrics);
+  latencies = [];
 }, 10000);
 
 function createMetric(metricName, metricValue, metricUnit, metricType, valueType, attributes) {
@@ -177,4 +194,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = {requestTracker, activeUserTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
+module.exports = {requestTracker, activeUserTracker, latencyTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
