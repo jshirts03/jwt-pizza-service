@@ -7,6 +7,10 @@ const requests = {};
 let successfulAuthCount = 0;
 let failedAuthCount = 0;
 let currentCpuUsage = 0;
+let pizzasSoldCount = 0;
+let failedPurchaseCount = 0;
+let bitcoinProfitCount = 0;
+let activeUsers = {}
 
 function markSuccessfulAuth(){
     successfulAuthCount++;
@@ -14,6 +18,22 @@ function markSuccessfulAuth(){
 
 function markFailedAuth(){
     failedAuthCount++;
+}
+
+function markPizzaSold(){
+  pizzasSoldCount++;
+}
+
+function markFailedPurchase(){
+  failedPurchaseCount++;
+}
+
+function moneyCounter(purchaseItems){
+  let purchaseTotal = 0;
+  purchaseItems.forEach((item) => {
+    purchaseTotal += item.price
+  })
+  bitcoinProfitCount += purchaseTotal;
 }
 
 const getCpuStats = () => {
@@ -54,6 +74,23 @@ function getMemoryUsagePercentage() {
   return memoryUsage.toFixed(2);
 }
 
+function activeUserTracker(req, res, next){
+  if (req.body.email){
+    activeUsers[req.body.email] = Date.now();
+  }
+  next();
+}
+
+//every 5 minutes, take out every active user that didn't have a request fulfilled within the last 5 minutes
+setInterval(() => {
+  let updatedActiveUsers = {}
+  Object.keys(activeUsers).forEach((user) => {
+    if (user.requestTime >= (Date.now() - 300000)){
+      updatedActiveUsers.push(user);
+    }
+  })
+  activeUsers = updatedActiveUsers;
+}, 300000)
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
@@ -70,6 +107,10 @@ setInterval(() => {
   });
    metrics.push(createMetric('authSuccess', successfulAuthCount, '1', 'sum', 'asInt', {}));
    metrics.push(createMetric('authFail', failedAuthCount, '1', 'sum', 'asInt', {}));
+   metrics.push(createMetric('pizzaSold', pizzasSoldCount, '1', 'sum', 'asInt', {}));
+   metrics.push(createMetric('failedPurchases', failedPurchaseCount, '1', 'sum', 'asInt', {}));
+   metrics.push(createMetric('bitcoinRevenue', bitcoinProfitCount, 'BTC', 'sum', 'asDouble', {}));
+   metrics.push(createMetric('activeUsers', Object.keys(activeUsers).length, '1', 'sum', 'asInt', {}));
    metrics.push(createMetric('cpuUsage', parseInt(currentCpuUsage), '%', 'gauge', 'asInt', {}));
    metrics.push(createMetric('memoryUsage', parseInt(getMemoryUsagePercentage()), '%', 'gauge', 'asInt', {}));
 
@@ -136,4 +177,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = {requestTracker, markSuccessfulAuth, markFailedAuth}
+module.exports = {requestTracker, activeUserTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
