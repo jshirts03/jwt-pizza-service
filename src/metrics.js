@@ -76,6 +76,7 @@ function getMemoryUsagePercentage() {
   return memoryUsage.toFixed(2);
 }
 
+//MiddleWare to check when a user makes a request
 function activeUserTracker(req, res, next){
   if (req.body.email){
     activeUsers[req.body.email] = Date.now();
