@@ -214,5 +214,5 @@ function sendMetricToGrafana(metrics) {
 }
 
 //Exporting to service
-
+//Please work
 module.exports = {requestTracker, activeUserTracker, latencyTracker, pizzaLatencyTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
