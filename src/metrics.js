@@ -212,4 +212,6 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
+//Exporting to service
+
 module.exports = {requestTracker, activeUserTracker, latencyTracker, pizzaLatencyTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
