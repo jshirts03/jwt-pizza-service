@@ -214,4 +214,5 @@ function sendMetricToGrafana(metrics) {
 }
 
 //Exporting to service
+//Abra cadabra
 module.exports = {requestTracker, activeUserTracker, latencyTracker, pizzaLatencyTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
