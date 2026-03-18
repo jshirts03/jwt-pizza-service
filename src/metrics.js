@@ -12,6 +12,7 @@ let failedPurchaseCount = 0;
 let bitcoinProfitCount = 0;
 let activeUsers = {};
 let latencies = [];
+let pizzaLatencies = [];
 
 function markSuccessfulAuth(){
     successfulAuthCount++;
@@ -111,6 +112,17 @@ function latencyTracker(req, res, next){
     next();
 };
 
+//Middleware used specifically to measure pizza selling latency
+function pizzaLatencyTracker(req, res, next){
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const end = process.hrtime.bigint();
+    const durationInMs = Number(end - start) / 1000000;
+    pizzaLatencies.push(durationInMs);
+  });
+    next();
+}
+
 // This will periodically send metrics to Grafana
 setInterval(() => {
   const metrics = [];
@@ -128,10 +140,16 @@ setInterval(() => {
   metrics.push(createMetric('memoryUsage', parseInt(getMemoryUsagePercentage()), '%', 'gauge', 'asInt', {}));
   if (latencies.length > 0){
     let avgLatency = latencies.reduce((acc, curr) => acc + curr, 0) / latencies.length
-    metrics.push(createMetric('averageLatency', avgLatency, '1', 'sum', 'asDouble', {}));
+    metrics.push(createMetric('averageLatency', avgLatency, 'ms', 'gauge', 'asDouble', {}));
+    latencies = [];
+  }
+  if (pizzaLatencies.length > 0){
+    let avgPizzaLatency = pizzaLatencies.reduce((acc, curr) => acc + curr, 0) / pizzaLatencies.length
+    metrics.push(createMetric('averagePizzaLatency', avgPizzaLatency, 'ms', 'gauge', 'asDouble', {}));
+    pizzaLatencies = [];
   }
   sendMetricToGrafana(metrics);
-  latencies = [];
+  
 }, 10000);
 
 function createMetric(metricName, metricValue, metricUnit, metricType, valueType, attributes) {
@@ -194,4 +212,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = {requestTracker, activeUserTracker, latencyTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}
+module.exports = {requestTracker, activeUserTracker, latencyTracker, pizzaLatencyTracker, markSuccessfulAuth, markFailedAuth, markPizzaSold, markFailedPurchase, moneyCounter}

@@ -3,7 +3,7 @@ const config = require('../config.js');
 const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
-const { markPizzaSold, markFailedPurchase, moneyCounter } = require('../metrics.js');
+const { markPizzaSold, markFailedPurchase, moneyCounter, pizzaLatencyTracker } = require('../metrics.js');
 
 const orderRouter = express.Router();
 
@@ -77,6 +77,7 @@ orderRouter.get(
 orderRouter.post(
   '/',
   authRouter.authenticateToken,
+  pizzaLatencyTracker,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
