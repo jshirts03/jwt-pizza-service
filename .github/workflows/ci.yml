@@ -72,16 +72,6 @@ jobs:
       #     color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
       #     curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
 
-      - name: Create dist
-        run: |
-          mkdir dist
-          cp Dockerfile dist
-          cp -r src/* dist
-          cp *.json dist
-          sed -i "s/root/${{ secrets.DB_USERNAME }}/g" dist/config.js
-          sed -i "s/tempdbpassword/${{ secrets.DB_PASSWORD }}/g" dist/config.js
-          sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
-    
       - name: Write config file
         run: |
           echo "module.exports = {
@@ -107,6 +97,16 @@ jobs:
               accountId: '${{ secrets.METRICS_ACCOUNT_ID_KEY }}',
             },            
           };" > src/config.js
+      
+      - name: Create dist
+        run: |
+          mkdir dist
+          cp Dockerfile dist
+          cp -r src/* dist
+          cp *.json dist
+          sed -i "s/root/${{ secrets.DB_USERNAME }}/g" dist/config.js
+          sed -i "s/tempdbpassword/${{ secrets.DB_PASSWORD }}/g" dist/config.js
+          sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
 
       - name: Update distribution artifact
         uses: actions/upload-artifact@v4
