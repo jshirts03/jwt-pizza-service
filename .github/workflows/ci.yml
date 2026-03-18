@@ -61,6 +61,16 @@ jobs:
               accountId: '${{ secrets.METRICS_ACCOUNT_ID_KEY }}',
             },            
           };" > src/config.js
+      
+      - name: Verify config injection
+        run: |
+          node -e "
+            const cfg = require('./src/config.js');
+            if (!cfg.metrics) throw new Error('config.metrics is missing');
+            if (!cfg.metrics.source) throw new Error('config.metrics.source is missing');
+            if (cfg.metrics.source !== 'jwt-pizza-service') throw new Error('config.metrics.source is incorrect');
+            console.log('✅ Config verification passed: metrics.source is present.');
+          "
         
       # - name: Tests
       #   run: npm test
@@ -78,7 +88,6 @@ jobs:
       #     color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
       #     curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
 
-      
       
       - name: Create dist
         run: |
