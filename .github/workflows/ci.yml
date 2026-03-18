@@ -81,31 +81,7 @@ jobs:
           sed -i "s/root/${{ secrets.DB_USERNAME }}/g" dist/config.js
           sed -i "s/tempdbpassword/${{ secrets.DB_PASSWORD }}/g" dist/config.js
           sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
-
-      - name: Update distribution artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: package
-          path: dist/
-      
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    needs: build
-    env:
-      version: ${{needs.build.outputs.version}}
-
-    steps:
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Download distribution artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: package
-      
+    
       - name: Write config file
         run: |
           echo "module.exports = {
@@ -131,6 +107,27 @@ jobs:
               accountId: '${{ secrets.METRICS_ACCOUNT_ID_KEY }}',
             },            
           };" > src/config.js
+
+      - name: Update distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: dist/
+      
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    needs: build
+    env:
+      version: ${{needs.build.outputs.version}}
+
+    steps:
+
+      - name: Download distribution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: package
 
       - name: Create OIDC token to AWS
         uses: aws-actions/configure-aws-credentials@v4
