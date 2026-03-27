@@ -37,6 +37,13 @@ class Logger {
     this.log(this.statusToLogLevel(res.statusCode), 'jwt factory', logData)
   }
 
+  logError(error){
+    const logData = {
+      message : error.message
+    }
+    this.log('error', 'unhandled error', logData)
+  }
+
   log(level, type, logData) {
     const labels = { component: config.source, level: level, type: type };
     const values = [this.nowString(), this.sanitize(logData)];
