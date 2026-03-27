@@ -30,10 +30,14 @@ class Logger {
   }
 
   logForFactoryReq(reqBody, res){
+    if (res.jwt){
+      res = 'successful purchase'
+    }
     const logData = {
       reqBody: reqBody,
-      resBody: res.body
+      resBody: res
     }
+    
     this.log(this.statusToLogLevel(res.statusCode), 'jwt factory', logData)
   }
 
