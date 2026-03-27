@@ -29,6 +29,14 @@ class Logger {
     this.log('info', 'db query', logData);
   }
 
+  logForFactoryReq(reqBody, res){
+    const logData = {
+      reqBody: reqBody,
+      resBody: res.body
+    }
+    this.log(this.statusToLogLevel(res.statusCode), 'jwt factory', logData)
+  }
+
   log(level, type, logData) {
     const labels = { component: config.source, level: level, type: type };
     const values = [this.nowString(), this.sanitize(logData)];
