@@ -30,12 +30,6 @@ class Logger {
   }
 
   logForFactoryReq(reqBody, res){
-    if (res.jwt){
-      res = 'successful purchase'
-    }
-    else{
-      res = "FAIL"
-    }
     const logData = {
       reqBody: reqBody,
       resBody: res
