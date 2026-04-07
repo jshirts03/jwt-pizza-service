@@ -6,7 +6,6 @@ const os = require('os');
 const requests = {};
 let successfulAuthCount = 0;
 let failedAuthCount = 0;
-let currentCpuUsage = 0;
 let pizzasSoldCount = 0;
 let failedPurchaseCount = 0;
 let bitcoinProfitCount = 0;
